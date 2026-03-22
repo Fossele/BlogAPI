@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Post a Blog</title>
+</head>
+<body>
+    <h1>Create a Blog</h1>
+    <form action="/blogs" method="POST">
+        <input type="text" name="title" placeholder="Blog title" required /><br/><br/>
+        <textarea name="content" placeholder="Blog content" required></textarea><br/><br/>
+        <button type="submit">Submit</button>
+    </form>
+    <div id="container"></div>
+    
+</body>
+<script>
+    fetch('/blogs')
+    .then(res => res.json())   // convert JSON response into JS array
+    .then(Blogs => {  
+   container = document.getElementById("container");
+  Blogs.forEach(blog => {
+    const div = document.createElement("div");
+   // console.log("I am working");
+    div.innerHTML = `<h2>${blog.title}</h2><p>${blog.content}</p>`;
+    container.appendChild(div);
+  })}).catch(err => console.log(err));  
+  
+</script>
+</html>
