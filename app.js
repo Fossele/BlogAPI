@@ -41,7 +41,6 @@ app.get('/blogs/:blogTitle', async (req, res) => {
       } catch(err){
         res.send(err);
       }
-
     });
 
 
