@@ -33,7 +33,7 @@ app.get('/api/articles', async (req, res) => {
 
 app.get('/api/articles/{id}', async (req, res) => {
       try{
-      const blog = Blog.find({ title: req.params. });
+      const blog = Blog.find({ title: req.params.id });
        res.send(blog);
       } catch(err){
         res.send(err);
