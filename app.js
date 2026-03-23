@@ -1,90 +1,160 @@
-const MONGO_URI="mongodb://localhost:27017"
+const MONGO_URI = "mongodb://localhost:27017/blogDB";
 
-const express = require('express')
-const bodyParser = require('body-parser')
-const mongoose = require('mongoose')
+const express = require('express');
+const mongoose = require('mongoose');
 
-const app = express()
+const app = express();
 
+// Middleware
+app.use(express.json());
 app.use(express.static('public'));
-app.use(bodyParser.urlencoded({extended: true}));
 
-mongoose.connect(MONGO_URI).then(()=>console.log("Mongoose database connected")).catch(err=>console.log(err));
+// DB connection
+mongoose.connect(MONGO_URI)
+  .then(() => console.log("Mongoose connected"))
+  .catch(err => console.log(err));
 
-const blogSchema = {
-    title: String,
-    content: String,
-}
+// Schema
+const blogSchema = new mongoose.Schema({
+    title: { type: String, required: true },
+    content: { type: String, required: true },
+    author: { type: String, required: true },
+    category: String,
+    tags: [String],
+    date: { type: Date, default: Date.now }
+});
 
 const Blog = mongoose.model("Blog", blogSchema);
 
-app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/public/index.html');
-});
 
-app.get('/api/articles', async (req, res) => {
-    try{
-        const blog = await Blog.find({});
-        res.send(blog);
-    }catch (err){
-         res.send(err);
-    }
-});
+// ================= ROUTES =================
 
-app.get('/api/articles/{id}', async (req, res) => {
-      try{
-      const blog = Blog.find({ title: req.params.id });
-       res.send(blog);
-      } catch(err){
-        res.send(err);
-      }
-    });
-
-
+// CREATE ARTICLE
 app.post('/api/articles', async (req, res) => {
-    const title = req.body.title;
-    const content = req.body.content;
-
-    const blog = new Blog({
-        title: title,
-        content: content
-    })
-
     try {
+        const { title, content, author, category, tags } = req.body;
+
+        if (!title || !content || !author) {
+            return res.status(400).json({ message: "Missing required fields" });
+        }
+
+        const blog = new Blog({ title, content, author, category, tags });
+
         await blog.save();
-        res.send('blog added!');
+
+        res.status(201).json({
+            message: "Article created",
+            id: blog._id
+        });
+
     } catch (err) {
-        res.send(err);
+        res.status(500).json({ error: err.message });
     }
 });
 
-app.delete('/api/articles/{id}', async (req, res) => {
-    const title = req.body.title;
 
+// GET ALL / FILTER ARTICLES
+app.get('/api/articles', async (req, res) => {
     try {
-        await Blog.deleteOne({ title: title });
-        res.send("blog deleted!");
+        const { category, author, date } = req.query;
+
+        let filter = {};
+
+        if (category) filter.category = category;
+        if (author) filter.author = author;
+        if (date) filter.date = new Date(date);
+
+        const blogs = await Blog.find(filter);
+
+        res.status(200).json(blogs);
+
     } catch (err) {
-        res.send(err);
+        res.status(500).json({ error: err.message });
     }
 });
 
-app.put(' /api/articles/{id}', async (req, res) => {
-    const { title, newTitle, newContent } = req.body;
 
+// GET SINGLE ARTICLE
+app.get('/api/articles/:id', async (req, res) => {
     try {
-        const updatedBlog = await Blog.findOneAndUpdate(
-            { title: title }, 
-            { title: newTitle, content: newContent }, 
-            { new: true } 
+        const blog = await Blog.findById(req.params.id);
+
+        if (!blog) {
+            return res.status(404).json({ message: "Article not found" });
+        }
+
+        res.status(200).json(blog);
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+// UPDATE ARTICLE
+app.put('/api/articles/:id', async (req, res) => {
+    try {
+        const { title, content, category, tags } = req.body;
+
+        const updatedBlog = await Blog.findByIdAndUpdate(
+            req.params.id,
+            { title, content, category, tags },
+            { new: true }
         );
 
-        res.send(updatedBlog);
+        if (!updatedBlog) {
+            return res.status(404).json({ message: "Article not found" });
+        }
+
+        res.status(200).json({
+            message: "Article updated",
+            article: updatedBlog
+        });
+
     } catch (err) {
-        res.send(err);
+        res.status(500).json({ error: err.message });
     }
 });
 
+
+// DELETE ARTICLE
+app.delete('/api/articles/:id', async (req, res) => {
+    try {
+        const deleted = await Blog.findByIdAndDelete(req.params.id);
+
+        if (!deleted) {
+            return res.status(404).json({ message: "Article not found" });
+        }
+
+        res.status(200).json({ message: "Article deleted" });
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+// SEARCH ARTICLES
+app.get('/api/articles/search', async (req, res) => {
+    try {
+        const { query } = req.query;
+
+        const results = await Blog.find({
+            $or: [
+                { title: { $regex: query, $options: 'i' } },
+                { content: { $regex: query, $options: 'i' } }
+            ]
+        });
+
+        res.status(200).json(results);
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+// SERVER
 app.listen(3000, () => {
-    console.log("listening on http://localhost:3000");
+    console.log("Server running on http://localhost:3000");
 });
