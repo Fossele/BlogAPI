@@ -7,12 +7,9 @@ const mongoose = require('mongoose')
 const app = express()
 
 app.use(express.static('public'));
-app.use(bodyParser.urlencoded({
-    extended: true
-}))
+app.use(bodyParser.urlencoded({extended: true}));
 
 mongoose.connect(MONGO_URI).then(()=>console.log("Mongoose database connected")).catch(err=>console.log(err));
-;
 
 const blogSchema = {
     title: String,
@@ -25,18 +22,18 @@ app.get('/', (req, res) => {
     res.sendFile(__dirname + '/public/index.html');
 });
 
-app.get('/blogs', async (req, res) => {
+app.get('/api/articles', async (req, res) => {
     try{
         const blog = await Blog.find({});
         res.send(blog);
     }catch (err){
          res.send(err);
     }
-})
+});
 
-app.get('/blogs/:blogTitle', async (req, res) => {
+app.get('/api/articles/{id}', async (req, res) => {
       try{
-      const blog = Blog.find({ title: req.params.blogTitle });
+      const blog = Blog.find({ title: req.params. });
        res.send(blog);
       } catch(err){
         res.send(err);
@@ -44,7 +41,7 @@ app.get('/blogs/:blogTitle', async (req, res) => {
     });
 
 
-app.post('/blogs', async (req, res) => {
+app.post('/api/articles', async (req, res) => {
     const title = req.body.title;
     const content = req.body.content;
 
@@ -59,9 +56,9 @@ app.post('/blogs', async (req, res) => {
     } catch (err) {
         res.send(err);
     }
-})
+});
 
-app.delete('/blogs', async (req, res) => {
+app.delete('/api/articles/{id}', async (req, res) => {
     const title = req.body.title;
 
     try {
@@ -70,8 +67,24 @@ app.delete('/blogs', async (req, res) => {
     } catch (err) {
         res.send(err);
     }
-})
+});
+
+app.put(' /api/articles/{id}', async (req, res) => {
+    const { title, newTitle, newContent } = req.body;
+
+    try {
+        const updatedBlog = await Blog.findOneAndUpdate(
+            { title: title }, 
+            { title: newTitle, content: newContent }, 
+            { new: true } 
+        );
+
+        res.send(updatedBlog);
+    } catch (err) {
+        res.send(err);
+    }
+});
 
 app.listen(3000, () => {
     console.log("listening on http://localhost:3000");
-})
+});
